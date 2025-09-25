@@ -1,22 +1,23 @@
-// api/sendMessage.js
 import fetch from "node-fetch";
 import crypto from "crypto";
 
 export default async function handler(req, res) {
-  const query = req.query;
-  const username = query.username || req.body?.username;
-  const message = query.message || req.body?.message;
-  const total = parseInt(query.total || req.body?.total || "5");
-  const delayMs = parseInt(query.delay || req.body?.delay || "500");
+  const username = req.query.username || req.body?.username;
+  const message = req.query.message || req.body?.message;
+  const total = parseInt(req.query.total || req.body?.total || "5");
 
-  if (!username || !message) {
-    return res.status(400).json({ dev: "Vinzz Official", status: false, error: "username & message required" });
+  if (!username || !message || !total) {
+    return res.status(400).json({
+      dev: "Vinzz Official",
+      status: false,
+      error: "username, message, total required"
+    });
   }
 
   let counter = 0;
-  const logs = [];
-
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const successLogs = [];
+  const errorLogs = [];
+  const allLogs = [];
 
   for (let i = 0; i < total; i++) {
     try {
@@ -44,23 +45,24 @@ export default async function handler(req, res) {
 
       if (response.status === 200) {
         counter++;
-        logs.push({ success: `Pengiriman #${counter}` });
+        successLogs.push(`Pengiriman #${counter}`);
+        allLogs.push({ success: `Pengiriman #${counter}` });
       } else {
-        logs.push({ error: `Err Status: ${response.status}` });
+        errorLogs.push(`Err Status: ${response.status}`);
+        allLogs.push({ error: `Err Status: ${response.status}` });
       }
     } catch (err) {
-      logs.push({ error: `Err: ${err.message}` });
+      errorLogs.push(`Err: ${err.message}`);
+      allLogs.push({ error: `Err: ${err.message}` });
     }
-
-    await sleep(delayMs);
   }
 
-  const status = counter > 0;
-
-  return res.status(200).json({
+  res.status(200).json({
     dev: "Vinzz Official",
-    status,
+    status: counter > 0,
     totalSent: counter,
-    logs
+    success: successLogs,
+    error: errorLogs,
+    logs: allLogs
   });
 }
