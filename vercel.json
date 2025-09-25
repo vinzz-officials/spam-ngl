@@ -4,6 +4,6 @@
     { "src": "api/sendMessage.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/spam-ngl", "methods": ["GET","POST"], "dest": "/api/sendMessage.js" }
+    { "src": "/spam", "methods": ["GET","POST"], "dest": "/api/sendMessage.js" }
   ]
 }
