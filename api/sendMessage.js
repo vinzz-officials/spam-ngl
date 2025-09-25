@@ -7,11 +7,13 @@ export default async function handler(req, res) {
   const total = parseInt(req.query.total || req.body?.total || "5");
 
   if (!username || !message || !total) {
-    return res.status(400).json({
+    const errorResponse = {
       dev: "Vinzz Official",
       status: false,
       error: "username, message, total required"
-    });
+    };
+    res.setHeader("Content-Type", "application/json");
+    return res.status(400).send(JSON.stringify(errorResponse, null, 2));
   }
 
   let counter = 0;
@@ -57,12 +59,15 @@ export default async function handler(req, res) {
     }
   }
 
-  res.status(200).json({
+  const finalResponse = {
     dev: "Vinzz Official",
     status: counter > 0,
     totalSent: counter,
     success: successLogs,
     error: errorLogs,
     logs: allLogs
-  });
+  };
+
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).send(JSON.stringify(finalResponse, null, 2));
 }
