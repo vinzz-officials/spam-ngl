@@ -2,6 +2,13 @@ import fetch from "node-fetch";
 import crypto from "crypto";
 
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") {
+  res.status(200).end();
+  return;
+  }
   const username = req.query.username || req.body?.username;
   const message = req.query.message || req.body?.message;
   const total = parseInt(req.query.total || req.body?.total || "5");
