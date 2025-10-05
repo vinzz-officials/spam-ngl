@@ -4,6 +4,7 @@ import crypto from "crypto";
 // Pool UA 50
 const userAgents = Array.from({length:50}, (_,i) => `UA-${i+1}-${crypto.randomBytes(8).toString("hex")}`);
 
+// Ambil UA random
 function getRandomUA() {
   return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
@@ -27,7 +28,7 @@ async function sendOne(username,message,maxRetry=3){
     const body=`username=${username}&question=${message}&deviceId=${deviceId}&gameSlug=&referrer=`;
 
     try{
-      const res=await fetch("https://ngl.link/api/submit",{method:"POST",headers,body});
+      const res = await fetch("https://ngl.link/api/submit",{method:"POST",headers,body});
       if(res.status===200) return {success:true};
       if(res.status!==429) return {success:false,status:res.status};
     }catch(err){
@@ -38,22 +39,22 @@ async function sendOne(username,message,maxRetry=3){
   return {success:false,status:429};
 }
 
-// Batch per UA
-async function sendBatch(username,message,countPerUA){
-  const results=[];
+// Kirim batch pesan untuk 1 UA (max 20 pesan per UA)
+async function sendUA(username,message,countPerUA){
+  const results = [];
   for(let i=0;i<countPerUA;i++){
-    results.push(await sendOne(username,message));
+    results.push(sendOne(username,message)); // tetap sequential per UA, tapi UA lain bisa concurrent
   }
-  return results;
+  return Promise.all(results); // return array hasil
 }
 
 export default async function handler(req,res){
   const username = req.query.username || req.body?.username;
   const message = req.query.message || req.body?.message;
   const total = parseInt(req.query.total || req.body?.total || "5");
-  const batchSize = 20;
+  const batchSize = 20; // max pesan per UA
 
-  if(!username||!message||!total){
+  if(!username || !message || !total){
     res.setHeader("Content-Type","application/json");
     return res.status(400).send(JSON.stringify({
       dev:"Vinzz Official",
@@ -62,16 +63,16 @@ export default async function handler(req,res){
     },null,2));
   }
 
-  // Hitung batch
-  const fullBatches = Math.floor(total/batchSize);
+  // Hitung jumlah UA yang dibutuhkan
+  const numUA = Math.ceil(total/batchSize);
+  const uaBatchCounts = Array(numUA).fill(batchSize);
+  // Koreksi batch terakhir jika remainder < batchSize
   const remainder = total % batchSize;
-  const batchCounts = [];
-  for(let i=0;i<fullBatches;i++) batchCounts.push(batchSize);
-  if(remainder>0) batchCounts.push(remainder);
+  if(remainder>0) uaBatchCounts[uaBatchCounts.length-1] = remainder;
 
-  // Jalankan semua batch concurrent
-  const allPromises = batchCounts.map(count => sendBatch(username,message,count));
-  const batchResults = await Promise.all(allPromises);
+  // Jalankan semua UA concurrently
+  const allUA = uaBatchCounts.map(count => sendUA(username,message,count));
+  const batchResults = await Promise.all(allUA);
 
   // Flatten hasil
   const flatResults = batchResults.flat();
@@ -100,4 +101,4 @@ export default async function handler(req,res){
     error:errorLogs,
     logs:allLogs
   },null,2));
-    }
+        }
