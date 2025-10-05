@@ -28,10 +28,11 @@ function getRandomUA() {
   return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
-async function sendRequest(username, message) {
+async function sendRequest(username, message, maxRetries = 5) {
+  let retries = 0;
   let ua = getRandomUA();
 
-  while (true) {
+  while (retries < maxRetries) {
     const deviceId = crypto.randomBytes(21).toString("hex");
     const headers = {
       "User-Agent": ua,
@@ -50,14 +51,18 @@ async function sendRequest(username, message) {
     try {
       const response = await fetch("https://ngl.link/api/submit", { method: "POST", headers, body });
       if (response.status === 200) return { success: true };
-      // langsung ganti UA kalau kena limit atau error
+      // ganti UA kalau kena limit atau error
       ua = getRandomUA();
+      retries++;
       if (response.status !== 429) return { success: false, status: response.status };
     } catch (err) {
       ua = getRandomUA();
-      continue;
+      retries++;
+      if (retries >= maxRetries) return { success: false, error: err.message };
     }
   }
+
+  return { success: false, error: "Max retries reached" };
 }
 
 export default async function handler(req, res) {
@@ -86,8 +91,8 @@ export default async function handler(req, res) {
       successLogs.push(`Pengiriman #${counter}`);
       allLogs.push({ success: `Pengiriman #${counter}` });
     } else {
-      errorLogs.push(`Err Status: ${result.status}`);
-      allLogs.push({ error: `Err Status: ${result.status}` });
+      errorLogs.push(result.status ? `Err Status: ${result.status}` : `Err: ${result.error}`);
+      allLogs.push(result.status ? { error: `Err Status: ${result.status}` } : { error: `Err: ${result.error}` });
     }
   }
 
@@ -102,4 +107,4 @@ export default async function handler(req, res) {
 
   res.setHeader("Content-Type", "application/json");
   res.status(200).send(JSON.stringify(finalResponse, null, 2));
-}
+    }
