@@ -1,7 +1,6 @@
 import fetch from "node-fetch";
 import crypto from "crypto";
 
-// daftar 20 User-Agent acak
 const userAgents = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/605.1.15 Version/17.6 Safari/605.1.15",
@@ -76,10 +75,10 @@ export default async function handler(req, res) {
         successLogs.push(`Pengiriman #${counter}`);
         allLogs.push({ success: `Pengiriman #${counter}` });
       } else if (response.status === 429) {
-        ua = getRandomUA(); // ganti UA random saat kena limit
+        ua = getRandomUA();
         errorLogs.push(`Limit hit, ganti UA baru`);
         allLogs.push({ error: `Limit hit, ganti UA baru` });
-        i--; // ulang request ini tapi pakai UA baru
+        i--; // ulang request ini pakai UA baru
         continue;
       } else {
         errorLogs.push(`Err Status: ${response.status}`);
@@ -102,4 +101,4 @@ export default async function handler(req, res) {
 
   res.setHeader("Content-Type", "application/json");
   res.status(200).send(JSON.stringify(finalResponse, null, 2));
-}
+        }
