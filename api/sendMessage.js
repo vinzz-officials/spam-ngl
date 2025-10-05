@@ -28,6 +28,38 @@ function getRandomUA() {
   return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
+async function sendRequest(username, message) {
+  let ua = getRandomUA();
+
+  while (true) {
+    const deviceId = crypto.randomBytes(21).toString("hex");
+    const headers = {
+      "User-Agent": ua,
+      "Accept": "*/*",
+      "Accept-Language": "en-US,en;q=0.5",
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "Referer": `https://ngl.link/${username}`,
+      "Origin": "https://ngl.link"
+    };
+    const body = `username=${username}&question=${message}&deviceId=${deviceId}&gameSlug=&referrer=`;
+
+    try {
+      const response = await fetch("https://ngl.link/api/submit", { method: "POST", headers, body });
+      if (response.status === 200) return { success: true };
+      // langsung ganti UA kalau kena limit atau error
+      ua = getRandomUA();
+      if (response.status !== 429) return { success: false, status: response.status };
+    } catch (err) {
+      ua = getRandomUA();
+      continue;
+    }
+  }
+}
+
 export default async function handler(req, res) {
   const username = req.query.username || req.body?.username;
   const message = req.query.message || req.body?.message;
@@ -47,46 +79,15 @@ export default async function handler(req, res) {
   const errorLogs = [];
   const allLogs = [];
 
-  let ua = getRandomUA();
-
   for (let i = 0; i < total; i++) {
-    const deviceId = crypto.randomBytes(21).toString("hex");
-
-    const headers = {
-      "User-Agent": ua,
-      "Accept": "*/*",
-      "Accept-Language": "en-US,en;q=0.5",
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      "X-Requested-With": "XMLHttpRequest",
-      "Sec-Fetch-Dest": "empty",
-      "Sec-Fetch-Mode": "cors",
-      "Sec-Fetch-Site": "same-origin",
-      "Referer": `https://ngl.link/${username}`,
-      "Origin": "https://ngl.link"
-    };
-
-    const body = `username=${username}&question=${message}&deviceId=${deviceId}&gameSlug=&referrer=`;
-
-    try {
-      const response = await fetch("https://ngl.link/api/submit", { method: "POST", headers, body });
-
-      if (response.status === 200) {
-        counter++;
-        successLogs.push(`Pengiriman #${counter}`);
-        allLogs.push({ success: `Pengiriman #${counter}` });
-      } else if (response.status === 429) {
-        ua = getRandomUA();
-        errorLogs.push(`Limit hit, ganti UA baru`);
-        allLogs.push({ error: `Limit hit, ganti UA baru` });
-        i--; // ulang request ini pakai UA baru
-        continue;
-      } else {
-        errorLogs.push(`Err Status: ${response.status}`);
-        allLogs.push({ error: `Err Status: ${response.status}` });
-      }
-    } catch (err) {
-      errorLogs.push(`Err: ${err.message}`);
-      allLogs.push({ error: `Err: ${err.message}` });
+    const result = await sendRequest(username, message);
+    if (result.success) {
+      counter++;
+      successLogs.push(`Pengiriman #${counter}`);
+      allLogs.push({ success: `Pengiriman #${counter}` });
+    } else {
+      errorLogs.push(`Err Status: ${result.status}`);
+      allLogs.push({ error: `Err Status: ${result.status}` });
     }
   }
 
@@ -101,4 +102,4 @@ export default async function handler(req, res) {
 
   res.setHeader("Content-Type", "application/json");
   res.status(200).send(JSON.stringify(finalResponse, null, 2));
-        }
+}
