@@ -4,7 +4,7 @@ import crypto from "crypto";
 export default async function handler(req, res) {
   const username = req.query.username || req.body?.username;
   const message = req.query.message || req.body?.message;
-  const total = parseInt(req.query.total || req.body?.total || "5");
+  const total = parseInt(req.query.total || req.body?.total);
 
   // Validasi parameter
   const missing = [];
